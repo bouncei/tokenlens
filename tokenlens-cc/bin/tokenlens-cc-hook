@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# tokenlens-cc-hook — thin wrapper that invokes the compiled hook script.
+#
+# Resolution order:
+#   1. ${CLAUDE_PLUGIN_ROOT}/../dist/hook-script.js  (when run via --plugin-dir
+#      from inside the tokenlens repo)
+#   2. ${CLAUDE_PLUGIN_ROOT}/dist/hook-script.js     (when shipped as a
+#      self-contained plugin zip)
+#   3. globally installed `tokenlens` package's dist
+#
+# Always exits 0 with an `allow` JSON if the script can't be located,
+# preserving the fail-allow contract.
+
+set -e
+
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+
+emit_allow() {
+  printf '%s' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}'
+  exit 0
+}
+
+CANDIDATES=(
+  "${PLUGIN_ROOT}/../dist/hook-script.js"
+  "${PLUGIN_ROOT}/dist/hook-script.js"
+  "$(npm root -g 2>/dev/null)/tokenlens/dist/hook-script.js"
+)
+
+for c in "${CANDIDATES[@]}"; do
+  if [ -f "$c" ]; then
+    exec node "$c" "$@"
+  fi
+done
+
+# Fallback — fail-allow.
+emit_allow

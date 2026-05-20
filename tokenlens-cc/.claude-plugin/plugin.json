@@ -1,0 +1,12 @@
+{
+  "name": "tokenlens",
+  "description": "Pre-flight token-cost warnings on every tool call. Surfaces what /context hides: MCP overhead, dead tool definitions, and budget thresholds. Free, OSS, no telemetry.",
+  "version": "0.2.0-pre",
+  "author": {
+    "name": "Joshua Inyang",
+    "url": "https://github.com/bouncei"
+  },
+  "homepage": "https://github.com/bouncei/tokenlens",
+  "repository": "https://github.com/bouncei/tokenlens",
+  "license": "MIT"
+}
