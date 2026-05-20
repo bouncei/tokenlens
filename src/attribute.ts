@@ -40,6 +40,8 @@ export type SourceCategory =
   | "hook_additional_context"
   | "deferred_tools_added"
   | "todo_reminder"
+  | "task_reminder"
+  | "goal_status"
   | "hook_system_message"
   | "hook_success"
   | "date_change"
@@ -66,6 +68,8 @@ const KNOWN_CATEGORIES = new Set<string>([
   "skill_listing",
   "hook_additional_context",
   "todo_reminder",
+  "task_reminder",
+  "goal_status",
   "hook_system_message",
   "hook_success",
   "date_change",

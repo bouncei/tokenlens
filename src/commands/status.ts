@@ -13,6 +13,7 @@ import { fmtTokens, fmtPct, fmtBytes, rightPad, leftPad, bar } from "../format.j
 export interface StatusOptions {
   cwd?: string;
   sessionPath?: string;
+  showDead?: boolean;
 }
 
 export async function runStatus(opts: StatusOptions = {}): Promise<void> {
@@ -166,7 +167,20 @@ export async function runStatus(opts: StatusOptions = {}): Promise<void> {
           status,
       );
     }
-    if (toolUsage.deadTools.length > 0 && toolUsage.deadTools.length <= 6) {
+    if (opts.showDead && toolUsage.deadTools.length > 0) {
+      console.log(kleur.dim(`  dead tools (${toolUsage.deadTools.length}):`));
+      // Group by server, print per server.
+      for (const s of mcpServers) {
+        if (s.deadToolNames.length === 0) continue;
+        console.log(kleur.dim(`    ${s.server}:`));
+        for (const name of s.deadToolNames.slice(0, 50)) {
+          console.log(kleur.dim(`      - ${name}`));
+        }
+        if (s.deadToolNames.length > 50) {
+          console.log(kleur.dim(`      … ${s.deadToolNames.length - 50} more`));
+        }
+      }
+    } else if (toolUsage.deadTools.length > 0 && toolUsage.deadTools.length <= 6) {
       console.log(kleur.dim(`  dead tools: ${toolUsage.deadTools.join(", ")}`));
     } else if (toolUsage.deadTools.length > 6) {
       console.log(

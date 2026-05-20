@@ -9,7 +9,7 @@ const command = args[0];
 async function main() {
   switch (command) {
     case "status":
-      await runStatus(parseCommonFlags(args.slice(1)));
+      await runStatus(parseStatusFlags(args.slice(1)));
       break;
     case "watch":
       await runWatch(parseCommonFlags(args.slice(1)));
@@ -40,6 +40,20 @@ function parseCommonFlags(args: string[]): { cwd?: string; sessionPath?: string 
   return out;
 }
 
+function parseStatusFlags(args: string[]): {
+  cwd?: string;
+  sessionPath?: string;
+  showDead?: boolean;
+} {
+  const out = parseCommonFlags(args) as {
+    cwd?: string;
+    sessionPath?: string;
+    showDead?: boolean;
+  };
+  out.showDead = args.includes("--show-dead");
+  return out;
+}
+
 function parseDoctorFlags(args: string[]): { fix?: boolean } {
   return { fix: args.includes("--fix") };
 }
@@ -58,6 +72,9 @@ Commands:
 Flags (status, watch):
   --cwd <path>       Resolve the active session for a different working directory
   --session <file>   Read a specific .jsonl directly (skips cwd lookup)
+
+Flags (status only):
+  --show-dead        List every dead MCP tool by name, grouped by server
 
 Flags (doctor):
   --fix              Actually delete stale items (default is dry-run)
