@@ -3,6 +3,7 @@ import { runStatus } from "./commands/status.js";
 import { runWatch } from "./commands/watch.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runInit } from "./commands/init.js";
+import { runBudget } from "./commands/budget.js";
 import type { Tier } from "./budget.js";
 
 const args = process.argv.slice(2);
@@ -21,6 +22,9 @@ async function main() {
       break;
     case "init":
       await runInit(parseInitFlags(args.slice(1)));
+      break;
+    case "budget":
+      await runBudget(parseCommonFlags(args.slice(1)));
       break;
     case undefined:
     case "help":
@@ -85,6 +89,7 @@ Commands:
   watch      Live-update breakdown as the active session grows (ctrl-c to stop)
   doctor     Detect (and optionally fix) duplicate skills / stale plugin versions
   init       Write a default tokenlens.json config (v2 setup; prep for plugin)
+  budget     Show your current session vs. weekly budget (preview of v2 hook)
 
 Flags (status, watch):
   --cwd <path>       Resolve the active session for a different working directory

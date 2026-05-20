@@ -65,7 +65,7 @@ Two findings worth the install on their own:
 
 2. **520k tokens** were written to cache as part of TTL-expiry invalidations across 16 separate moments — roughly $4 of cache-write cost on Opus, paid silently across the session and **invisible to `/context`**. `tokenlens` names it as `cache_invalidation_or_growth` so you can see when it's happening.
 
-## Three commands
+## Commands
 
 ### `tokenlens status`
 
@@ -98,6 +98,40 @@ Default is dry-run; pass `--fix` to actually remove. Every deletion is logged wi
 tokenlens doctor          # report only
 tokenlens doctor --fix    # actually delete
 ```
+
+### `tokenlens init` and `tokenlens budget` (v2 preview)
+
+Configure a weekly token budget and check your current session against it:
+
+```bash
+tokenlens init --tier max5      # writes ~/.claude/tokenlens.json with sane defaults
+tokenlens budget                # shows: ALLOW / WARN / ASK / DENY vs your budget
+```
+
+These are the building blocks for v2's `PreToolUse` hook — see "v2 preview" below.
+
+## v2 preview — proactive budget enforcement (testable today)
+
+The next surface is a Claude Code plugin that runs on every tool call and:
+
+- **Silently allows** if you're under 50% of your weekly cap
+- **Injects a warning** into Claude's context at 50–80% (Claude can decide to wrap up early)
+- **Asks for confirmation** at 80–95% (you click through)
+- **Denies** at 95%+ (or earlier if `hardCap: true` in your config)
+
+It's already wired up. Test it locally:
+
+```bash
+git clone https://github.com/bouncei/tokenlens.git
+cd tokenlens
+pnpm install                                # builds dist/
+tokenlens init --tier max5                  # writes ~/.claude/tokenlens.json
+claude --plugin-dir ./tokenlens-cc          # loads the plugin
+```
+
+Now every tool call hits the budget evaluator. Watch the decisions in `~/.claude/tokenlens.log`. The PreToolUse hook contract is fail-allow — a misbehaving hook will never block your workflow.
+
+Marketplace submission to `claude-plugins-community` is pending. See [`docs/V2-DESIGN.md`](./docs/V2-DESIGN.md) for the full spec.
 
 ## How it works
 
@@ -140,11 +174,11 @@ Requires Node.js 20 or newer.
 
 ## Roadmap
 
-- **v1 (this release):** CLI `status`, `watch`, `doctor`. Free, OSS.
-- **v2 (next 90 days):** Pre-flight hook into Claude Code's `PreToolUse` — "this turn will cost X tokens, Y% of your weekly cap — proceed?" Hard-cap sessions. Auto-disable MCP servers never called this session. macOS menu-bar app. Free tier stays free; paid tier ($9–19/mo) adds cross-machine sync, weekly digest, team views.
+- **v1 (shipped, v0.1.0):** CLI `status`, `watch`, `doctor`, `init`, `budget`. Free, OSS.
+- **v2 (in progress, testable now):** [`tokenlens-cc`](./tokenlens-cc/) plugin wiring tokenlens into Claude Code's `PreToolUse` hook — proactive budget warnings, hard caps, and session-context injection. Pending community marketplace review. Free tier stays free; paid tier ($9–19/mo) adds cross-machine sync, weekly digest, team views (not yet built).
 - **v3 (next 12 months):** Same value prop, cross-IDE. Cursor, Cline, Gemini CLI.
 
-See [`docs/GOAL.md`](./docs/GOAL.md) for the full project goal and anti-goals.
+See [`docs/GOAL.md`](./docs/GOAL.md) for the full project goal and anti-goals, and [`docs/V2-DESIGN.md`](./docs/V2-DESIGN.md) for the v2 spec.
 
 ## Caveats
 
