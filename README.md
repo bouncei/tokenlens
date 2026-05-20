@@ -28,30 +28,42 @@ Run against my live session as I'm writing this:
 $ tokenlens status
 tokenlens status
   session  ~/.claude/projects/-Users-josh-tokenlens/abc.jsonl
-  turns    263 assistant
+  turns    278 assistant
 
 Tokens consumed by Anthropic
   input (uncached)           38.9k
-  cache writes               2.06M   ← bloat lives here
-  cache reads               40.14M   ← cheap
-  output                    293.7k
-  cache hit rate             95.1%
+  cache writes               2.07M   ← bloat lives here
+  cache reads               41.21M   ← cheap
+  output                    298.4k
+  cache hit rate             95.2%
 
 Output by attributionSkill
-  <unattributed>          ████████████████   201.2k   (198 turns)
-  idea-scout              ███████░░░░░░░░░    92.6k   (65 turns)
+  <unattributed>          ████████████████   208.7k   (213 turns)
+  idea-scout              ██████░░░░░░░░░░    92.6k   (65 turns)
 
 Injected context by source
-  (share-by-weight, capped at 1.5x estimated size; residual goes
-   to cache_invalidation_or_growth. ~ = heuristic for text-less)
+  cache_invalidation_or_growth  ████████████████ ! 520.3k   across 16 turns
   deferred_tools_added          █░░░░░░░░░░░░░░░ ~  25.0k   3 ev, 0 B text
   skill_listing                 ░░░░░░░░░░░░░░░░     1.5k   1 ev, 13.3 KB text
-  todo_reminder                 ░░░░░░░░░░░░░░░░ ~    825   11 ev, 0 B text
   hook_additional_context       ░░░░░░░░░░░░░░░░      791   1 ev, 5.5 KB text
-  cache_invalidation_or_growth  ████████████████ ! 518.2k   across 15 turns
+
+MCP servers (loaded vs. invoked)
+  (~50.5k estimated on tools never called)
+  7dfd9fcf…               ████████████ ~  10.3k   ● never called
+  plugin_playwright_playw…███████░░░░░ ~   5.8k   ● never called
+  playwright              ███████░░░░░ ~   5.8k   ● never called
+  Claude_in_Chrome        ██████░░░░░░ ~   5.5k   ● never called
+  filesystem              ████░░░░░░░░ ~   3.5k   ● never called
+  memory                  ███░░░░░░░░░ ~   2.3k   ● never called
+  ...
+  202 dead tools (use --show-dead for full list)
 ```
 
-That last line is the punchline. Over the course of this session, **518k tokens were written to cache as part of invalidations that Anthropic's own `/context` won't surface**. That's roughly $4 of cache-write cost on Opus, paid silently across 15 separate moments. `tokenlens` names it.
+Two findings worth the install on their own:
+
+1. **~50,500 tokens** of context overhead this session was spent on **MCP tools that were never invoked**. Every server I had loaded — filesystem, memory, playwright, all 10 of them — got definition-injected and never called. That's `/context` reporting "you're at 60%" while 25% of the load is dead weight you could disable with one line in `.mcp.json`.
+
+2. **520k tokens** were written to cache as part of TTL-expiry invalidations across 16 separate moments — roughly $4 of cache-write cost on Opus, paid silently across the session and **invisible to `/context`**. `tokenlens` names it as `cache_invalidation_or_growth` so you can see when it's happening.
 
 ## Three commands
 

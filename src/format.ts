@@ -24,7 +24,18 @@ export function bar(value: number, max: number, width = 24): string {
 }
 
 export function rightPad(s: string, width: number): string {
-  return s.length >= width ? s : s + " ".repeat(width - s.length);
+  if (s.length > width) s = truncate(s, width);
+  if (s.length >= width) return s;
+  return s + " ".repeat(width - s.length);
+}
+
+export function truncate(s: string, width: number): string {
+  if (s.length <= width) return s;
+  // For UUID-like strings (>=32 hex/dash chars), show first 8 + ellipsis.
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(s)) {
+    return s.slice(0, 8) + "…";
+  }
+  return s.slice(0, Math.max(1, width - 1)) + "…";
 }
 
 export function leftPad(s: string, width: number): string {

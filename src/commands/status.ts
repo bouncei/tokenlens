@@ -7,6 +7,7 @@ import {
   attributeBySkill,
 } from "../parsers/session.js";
 import { buildAttribution, totalsByCategory } from "../attribute.js";
+import { analyzeToolUsage } from "../analyze/tools.js";
 import { fmtTokens, fmtPct, fmtBytes, rightPad, leftPad, bar } from "../format.js";
 
 export interface StatusOptions {
@@ -37,6 +38,7 @@ export async function runStatus(opts: StatusOptions = {}): Promise<void> {
   const skills = attributeBySkill(rows);
   const attribution = buildAttribution(rows);
   const categories = totalsByCategory(attribution.events);
+  const toolUsage = analyzeToolUsage(rows);
 
   // ---- Header ----
   console.log("");
@@ -132,6 +134,45 @@ export async function runStatus(opts: StatusOptions = {}): Promise<void> {
           kleur.dim(
             `   across ${attribution.invalidationTurns} turn${attribution.invalidationTurns === 1 ? "" : "s"}`,
           ),
+      );
+    }
+    console.log("");
+  }
+
+  // ---- MCP server usage ----
+  const mcpServers = toolUsage.servers.filter((s) => s.server !== "<built-in>");
+  if (mcpServers.length > 0) {
+    console.log(kleur.bold("MCP servers (loaded vs. invoked)"));
+    console.log(
+      kleur.dim(
+        `  (~${fmtTokens(toolUsage.deadEstimatedTokens)} estimated on tools never called)`,
+      ),
+    );
+    const maxDead = Math.max(...mcpServers.map((s) => s.deadEstimatedTokens), 1);
+    for (const s of mcpServers.slice(0, 10)) {
+      const status =
+        s.toolsInvoked === 0
+          ? kleur.red("● never called")
+          : s.toolsDead === 0
+          ? kleur.green("● fully used")
+          : kleur.yellow(`● ${s.toolsInvoked}/${s.toolsLoaded} used`);
+      console.log(
+        "  " +
+          rightPad(s.server, 24) +
+          bar(s.deadEstimatedTokens, maxDead, 12) +
+          kleur.yellow(" ~") +
+          leftPad(fmtTokens(s.deadEstimatedTokens), 7) +
+          "   " +
+          status,
+      );
+    }
+    if (toolUsage.deadTools.length > 0 && toolUsage.deadTools.length <= 6) {
+      console.log(kleur.dim(`  dead tools: ${toolUsage.deadTools.join(", ")}`));
+    } else if (toolUsage.deadTools.length > 6) {
+      console.log(
+        kleur.dim(
+          `  ${toolUsage.deadTools.length} dead tools (use --show-dead for full list)`,
+        ),
       );
     }
     console.log("");
