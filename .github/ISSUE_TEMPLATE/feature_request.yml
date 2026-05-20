@@ -1,0 +1,49 @@
+name: Feature request
+description: Something tokenlens doesn't show but you wish it did
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing, please skim [`docs/GOAL.md`](https://github.com/bouncei/tokenlens/blob/main/docs/GOAL.md) — it lists explicit anti-goals (things we won't do, like becoming a generic LLM observability platform). If your feature is in scope, this template helps us prioritize.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: |
+        Concrete user story preferred. "I have N MCP servers loaded and want to know which ones are dead this *week*, not this session" beats "tokenlens should track historical usage."
+    validations:
+      required: true
+
+  - type: textarea
+    id: shape
+    attributes:
+      label: What would it look like?
+      description: A mock of the CLI output, a flag name, or a workflow description.
+      placeholder: |
+        e.g. `tokenlens trend --since 7d` showing per-MCP-server dead-token totals across the last 7 days
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface?
+      multiple: true
+      options:
+        - status (one-shot)
+        - watch (live)
+        - doctor (diagnostics + fix)
+        - new subcommand
+        - integration (PreToolUse hook, menu-bar app)
+        - other
+
+  - type: textarea
+    id: in-scope-check
+    attributes:
+      label: In-scope check (optional but appreciated)
+      description: |
+        Could Anthropic ship this in `/context` next month? If yes, we probably shouldn't add it (anti-goal #4).
+        Anything that surfaces *what /context hides* is in scope. Anything that duplicates `/context` is not.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / discussion
+    url: https://github.com/bouncei/tokenlens/discussions
+    about: Not a bug or feature? Use Discussions for "how do I read this output" or "is X possible".
+  - name: Schema mismatch on a newer Claude Code version
+    url: https://github.com/bouncei/tokenlens/issues/new?template=bug_report.yml
+    about: If tokenlens fails on a Claude Code version newer than v2.1.138, file a bug — the jsonl schema reverse-engineering needs your help to stay current.

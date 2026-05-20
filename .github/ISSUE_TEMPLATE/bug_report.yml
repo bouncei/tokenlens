@@ -1,0 +1,68 @@
+name: Bug report
+description: Something broken or wrong in the tokenlens output
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing! Anonymized session snippets help more than full sessions — see the placeholder examples below for what's useful vs. what we don't need.
+
+  - type: input
+    id: cc-version
+    attributes:
+      label: Claude Code version
+      description: Output of `claude --version` (or check the `version` field in any line of your session jsonl).
+      placeholder: "2.1.138"
+    validations:
+      required: true
+
+  - type: input
+    id: tokenlens-version
+    attributes:
+      label: tokenlens version
+      description: Output of `npx -y github:bouncei/tokenlens --help | head -1`, or the commit SHA if you cloned.
+      placeholder: "v0.1.0 / commit ea5b6e8"
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: "v22.0.0"
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: "npx -y github:bouncei/tokenlens status --cwd /path/to/project"
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Paste the full output (anonymize paths if needed). If tokenlens crashed, include the stack trace.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: schema-mismatch
+    attributes:
+      label: Schema mismatch? (optional)
+      description: |
+        If you suspect the schema has shifted in your Claude Code version, paste one or two anonymized
+        jsonl lines from your session — especially the `assistant` row whose `usage` looks wrong, or the
+        `attachment` row whose category surprised us. Replace any paths/file contents with `<redacted>`.
+      render: json
