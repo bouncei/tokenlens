@@ -1,13 +1,26 @@
 // Attribute observed token spend back to its sources (skills, MCP servers,
 // hook-injected context, etc.) using two signals:
 //
-//   1. attachment.content — the literal text injected by a hook or skill_listing
-//   2. cache_creation_input_tokens — Anthropic's own count of what was written
-//      to cache on a given turn
+//   1. attachment payload — the literal text injected by a hook or
+//      skill_listing (counted with the local tokenizer)
+//   2. cache_creation_input_tokens — Anthropic's own count of what was
+//      written to cache on a given turn
 //
-// For the live session view we use *Anthropic's* numbers wherever possible.
-// We only fall back to local tokenization (in tokens/count.ts, not here)
-// when no usage row has been emitted yet — i.e. for the pre-flight estimate.
+// Strategy (v1): per-following-turn share-out.
+//
+//   For each assistant turn, gather all attachments injected since the
+//   previous turn. Assign each attachment a *weight*:
+//     - text-bearing → estimated tokens of its content
+//     - deferred_tools_delta → 250 * tools_added (heuristic)
+//     - other text-less attachments → 50 (heuristic)
+//   Then allocate the turn's observed cache_creation_input_tokens across
+//   the attachments in proportion to weight. This gives non-zero credit
+//   to MCP loading even though we can't see the tool schemas locally.
+//
+// This is still a loose attribution — Anthropic's cache_creation can
+// include things outside our visible attachments (e.g., file reads
+// promoted into context, cache TTL invalidation). We mark heuristic
+// values in the UI so the user knows what's a count vs. an estimate.
 
 import {
   type AttachmentRow,
@@ -16,6 +29,11 @@ import {
   isAssistant,
   isAttachment,
 } from "./parsers/session.js";
+import {
+  estimateTextTokens,
+  TOOL_DEFINITION_TOKEN_ESTIMATE,
+  STRUCTURAL_ATTACHMENT_TOKEN_ESTIMATE,
+} from "./tokens/count.js";
 
 export type SourceCategory =
   | "skill_listing"
@@ -30,15 +48,18 @@ export type SourceCategory =
   | "other";
 
 export interface AttachmentEvent {
-  index: number;                   // row index in the session
+  index: number;
   uuid?: string;
   timestamp?: string;
   category: SourceCategory;
-  label: string;                   // e.g. "skill_listing(44 skills)"
-  textBytes: number;               // size of injected content (when present)
-  toolNamesAdded?: string[];       // for deferred_tools_delta
+  label: string;
+  textBytes: number;
+  estimatedTokens: number;        // local estimate (heuristic for text-less)
+  isEstimated: boolean;           // true when no text payload was tokenized
+  toolNamesAdded?: string[];
   pendingMcpServers?: string[];
-  followingTurnCacheCreation?: number; // cache_creation_input_tokens on the next assistant turn
+  /** Allocated share of the next assistant turn's cache_creation_input_tokens. */
+  attributedCacheCreation: number;
 }
 
 const KNOWN_CATEGORIES = new Set<string>([
@@ -60,15 +81,18 @@ export function categorizeAttachment(att: AttachmentRow["attachment"]): SourceCa
   return "other";
 }
 
-function attachmentBytes(att: AttachmentRow["attachment"]): number {
-  if (typeof att.content === "string") return Buffer.byteLength(att.content);
+function attachmentText(att: AttachmentRow["attachment"]): string {
+  if (typeof att.content === "string") return att.content;
   if (Array.isArray(att.content)) {
-    return att.content.reduce(
-      (n, s) => n + (typeof s === "string" ? Buffer.byteLength(s) : 0),
-      0,
-    );
+    return att.content
+      .filter((s): s is string => typeof s === "string")
+      .join("\n");
   }
-  return 0;
+  return "";
+}
+
+function attachmentBytes(att: AttachmentRow["attachment"]): number {
+  return Buffer.byteLength(attachmentText(att));
 }
 
 function attachmentLabel(att: AttachmentRow["attachment"]): string {
@@ -91,24 +115,49 @@ function attachmentLabel(att: AttachmentRow["attachment"]): string {
   return att.type ?? "unknown";
 }
 
+interface Weighted {
+  weight: number;
+  isEstimated: boolean;
+}
+
+function weighAttachment(att: AttachmentRow["attachment"]): Weighted {
+  const text = attachmentText(att);
+  if (text.length > 0) {
+    return { weight: estimateTextTokens(text), isEstimated: false };
+  }
+  if (att.type === "deferred_tools_delta") {
+    const tools = att.addedNames?.length ?? 0;
+    return {
+      weight: tools * TOOL_DEFINITION_TOKEN_ESTIMATE,
+      isEstimated: true,
+    };
+  }
+  return { weight: STRUCTURAL_ATTACHMENT_TOKEN_ESTIMATE, isEstimated: true };
+}
+
 /**
- * Walk the session in order, build a list of attachment injections, and
- * tag each one with a *share* of the cache_creation_input_tokens observed
- * on the immediately-following assistant turn.
- *
- * Share-out: when N attachments precede the same assistant turn, that
- * turn's cache_creation is divided across them proportional to each
- * attachment's content size (falling back to even split when none have
- * content). This avoids the obvious double-count where session-start
- * fires five attachments before the first turn and each one looks
- * "responsible" for the full 22k cache write.
- *
- * It's still a loose attribution — what actually got written to cache may
- * include things outside our visible attachments — but the share-out keeps
- * the totals honest.
+ * Per-attachment attribution is capped at the attachment's own estimated
+ * weight (×CAP_MULTIPLIER for safety margin). Any residual on a turn —
+ * cache_creation we can't reasonably explain from visible attachments —
+ * is bucketed into a synthetic `cache_invalidation_or_growth` event so it
+ * doesn't get pinned on whatever happened to precede it.
  */
-export function buildAttachmentEvents(rows: SessionRow[]): AttachmentEvent[] {
-  // Group attachments by the index of the assistant turn that follows them.
+const CAP_MULTIPLIER = 1.5;
+
+export interface AttributionResult {
+  events: AttachmentEvent[];
+  /** Cache_creation that couldn't be tied to any visible attachment. */
+  unattributedCacheCreation: number;
+  /** Number of assistant turns where unattributed > 0. */
+  invalidationTurns: number;
+}
+
+/**
+ * Walk the session in order, group attachments by the assistant turn that
+ * immediately follows them, share-out by estimated weight up to a per-event
+ * cap, and surface any unaccountable residual as a separate bucket.
+ */
+export function buildAttribution(rows: SessionRow[]): AttributionResult {
   const groups = new Map<number, number[]>();
   const nextAssistantIndex = new Map<number, number>();
 
@@ -130,44 +179,35 @@ export function buildAttachmentEvents(rows: SessionRow[]): AttachmentEvent[] {
   }
 
   const events: AttachmentEvent[] = [];
+  let unattributed = 0;
+  let invalidationTurns = 0;
+
   for (const [followingIdx, attachmentIdxs] of groups) {
     const following = rows[followingIdx] as AssistantRow;
     const followingCC = following.message.usage.cache_creation_input_tokens ?? 0;
 
-    const sizes = attachmentIdxs.map((i) =>
-      attachmentBytes((rows[i] as AttachmentRow).attachment),
+    const weights = attachmentIdxs.map((i) =>
+      weighAttachment((rows[i] as AttachmentRow).attachment),
     );
-    const totalSize = sizes.reduce((n, s) => n + s, 0);
+    const totalWeight = weights.reduce((n, w) => n + w.weight, 0);
+    const totalCap = Math.round(totalWeight * CAP_MULTIPLIER);
+
+    // We can't credit more than the cap; anything beyond is invalidation.
+    const attributable = Math.min(followingCC, totalCap);
+    const residual = followingCC - attributable;
+    if (residual > 0) {
+      unattributed += residual;
+      invalidationTurns++;
+    }
 
     attachmentIdxs.forEach((i, k) => {
       const row = rows[i] as AttachmentRow;
       const att = row.attachment;
       const share =
-        totalSize > 0
-          ? Math.round(followingCC * (sizes[k] / totalSize))
-          : Math.round(followingCC / attachmentIdxs.length);
+        totalWeight > 0
+          ? Math.round(attributable * (weights[k].weight / totalWeight))
+          : Math.round(attributable / attachmentIdxs.length);
 
-      events.push({
-        index: i,
-        uuid: row.uuid,
-        timestamp: row.timestamp,
-        category: categorizeAttachment(att),
-        label: attachmentLabel(att),
-        textBytes: sizes[k],
-        toolNamesAdded: att.type === "deferred_tools_delta" ? att.addedNames : undefined,
-        pendingMcpServers: att.pendingMcpServers,
-        followingTurnCacheCreation: share,
-      });
-    });
-  }
-
-  // Add tail attachments with no following assistant turn (rare; usually
-  // session-end). They get 0 attribution.
-  for (let i = 0; i < rows.length; i++) {
-    if (!isAttachment(rows[i])) continue;
-    if ((nextAssistantIndex.get(i) ?? -1) < 0) {
-      const row = rows[i] as AttachmentRow;
-      const att = row.attachment;
       events.push({
         index: i,
         uuid: row.uuid,
@@ -175,23 +215,57 @@ export function buildAttachmentEvents(rows: SessionRow[]): AttachmentEvent[] {
         category: categorizeAttachment(att),
         label: attachmentLabel(att),
         textBytes: attachmentBytes(att),
+        estimatedTokens: weights[k].weight,
+        isEstimated: weights[k].isEstimated,
         toolNamesAdded: att.type === "deferred_tools_delta" ? att.addedNames : undefined,
         pendingMcpServers: att.pendingMcpServers,
-        followingTurnCacheCreation: 0,
+        attributedCacheCreation: share,
+      });
+    });
+  }
+
+  // Tail attachments with no following assistant turn.
+  for (let i = 0; i < rows.length; i++) {
+    if (!isAttachment(rows[i])) continue;
+    if ((nextAssistantIndex.get(i) ?? -1) < 0) {
+      const row = rows[i] as AttachmentRow;
+      const att = row.attachment;
+      const w = weighAttachment(att);
+      events.push({
+        index: i,
+        uuid: row.uuid,
+        timestamp: row.timestamp,
+        category: categorizeAttachment(att),
+        label: attachmentLabel(att),
+        textBytes: attachmentBytes(att),
+        estimatedTokens: w.weight,
+        isEstimated: w.isEstimated,
+        toolNamesAdded: att.type === "deferred_tools_delta" ? att.addedNames : undefined,
+        pendingMcpServers: att.pendingMcpServers,
+        attributedCacheCreation: 0,
       });
     }
   }
 
-  return events.sort((a, b) => a.index - b.index);
+  return {
+    events: events.sort((a, b) => a.index - b.index),
+    unattributedCacheCreation: unattributed,
+    invalidationTurns,
+  };
+}
+
+// Backwards-compat wrapper for tests; thin shim around buildAttribution.
+export function buildAttachmentEvents(rows: SessionRow[]): AttachmentEvent[] {
+  return buildAttribution(rows).events;
 }
 
 export interface CategoryTotal {
   category: SourceCategory;
   events: number;
   textBytes: number;
-  // Sum of cache_creation_input_tokens on the assistant turn that
-  // *immediately followed* events in this category. Loose attribution.
-  followingCacheCreation: number;
+  estimatedTokens: number;
+  attributedCacheCreation: number;
+  anyEstimated: boolean;
 }
 
 export function totalsByCategory(events: AttachmentEvent[]): CategoryTotal[] {
@@ -201,12 +275,18 @@ export function totalsByCategory(events: AttachmentEvent[]): CategoryTotal[] {
       category: ev.category,
       events: 0,
       textBytes: 0,
-      followingCacheCreation: 0,
+      estimatedTokens: 0,
+      attributedCacheCreation: 0,
+      anyEstimated: false,
     };
     entry.events++;
     entry.textBytes += ev.textBytes;
-    entry.followingCacheCreation += ev.followingTurnCacheCreation ?? 0;
+    entry.estimatedTokens += ev.estimatedTokens;
+    entry.attributedCacheCreation += ev.attributedCacheCreation;
+    entry.anyEstimated = entry.anyEstimated || ev.isEstimated;
     map.set(ev.category, entry);
   }
-  return [...map.values()].sort((a, b) => b.followingCacheCreation - a.followingCacheCreation);
+  return [...map.values()].sort(
+    (a, b) => b.attributedCacheCreation - a.attributedCacheCreation,
+  );
 }

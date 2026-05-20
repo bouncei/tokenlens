@@ -6,7 +6,7 @@ import {
   cacheHitRate,
   attributeBySkill,
 } from "../parsers/session.js";
-import { buildAttachmentEvents, totalsByCategory } from "../attribute.js";
+import { buildAttribution, totalsByCategory } from "../attribute.js";
 import { fmtTokens, fmtPct, fmtBytes, rightPad, leftPad, bar } from "../format.js";
 
 export interface StatusOptions {
@@ -35,8 +35,8 @@ export async function runStatus(opts: StatusOptions = {}): Promise<void> {
   const usage = sumUsage(rows);
   const hitRate = cacheHitRate(usage);
   const skills = attributeBySkill(rows);
-  const events = buildAttachmentEvents(rows);
-  const categories = totalsByCategory(events);
+  const attribution = buildAttribution(rows);
+  const categories = totalsByCategory(attribution.events);
 
   // ---- Header ----
   console.log("");
@@ -98,23 +98,40 @@ export async function runStatus(opts: StatusOptions = {}): Promise<void> {
     console.log(kleur.bold("Injected context by source"));
     console.log(
       kleur.dim(
-        "  (share-by-bytes of the next assistant turn's cache_creation;",
+        "  (share-by-weight, capped at 1.5x estimated size; residual goes",
       ),
     );
     console.log(
       kleur.dim(
-        "   sources with no visible text payload show 0 here — see DESIGN.md §5)",
+        "   to cache_invalidation_or_growth. ~ = heuristic for text-less)",
       ),
     );
-    const maxCC = Math.max(...categories.map((c) => c.followingCacheCreation), 1);
+    const allValues = [
+      ...categories.map((c) => c.attributedCacheCreation),
+      attribution.unattributedCacheCreation,
+    ];
+    const maxCC = Math.max(...allValues, 1);
     for (const c of categories) {
+      const flag = c.anyEstimated ? kleur.yellow(" ~") : "  ";
       console.log(
         "  " +
-          rightPad(c.category, 26) +
-          bar(c.followingCacheCreation, maxCC, 16) +
-          "  " +
-          leftPad(fmtTokens(c.followingCacheCreation), 7) +
+          rightPad(c.category, 30) +
+          bar(c.attributedCacheCreation, maxCC, 16) +
+          flag +
+          leftPad(fmtTokens(c.attributedCacheCreation), 7) +
           kleur.dim(`   ${c.events} ev, ${fmtBytes(c.textBytes)} text`),
+      );
+    }
+    if (attribution.unattributedCacheCreation > 0) {
+      console.log(
+        "  " +
+          rightPad("cache_invalidation_or_growth", 30) +
+          bar(attribution.unattributedCacheCreation, maxCC, 16) +
+          kleur.magenta(" !") +
+          leftPad(fmtTokens(attribution.unattributedCacheCreation), 7) +
+          kleur.dim(
+            `   across ${attribution.invalidationTurns} turn${attribution.invalidationTurns === 1 ? "" : "s"}`,
+          ),
       );
     }
     console.log("");

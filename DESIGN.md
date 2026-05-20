@@ -71,15 +71,21 @@ That decomposes into three concrete moments where the user pulls tokenlens out:
 Stripped to the bone. **Goal: a thing that returns "yes, my token spend dropped" for the first 50 users within 30 days of launch.**
 
 ### v1 in scope
-- A CLI: `tokenlens status` shows the current session's token breakdown by source (skills, plugins, MCP servers, CLAUDE.md, conversation history).
-- A live watch mode: `tokenlens watch` runs as a daemon, tails the active session, and updates a TUI in place.
-- Detection of the four documented bloat classes from Issue #29971:
-  1. Skill / plugin duplicate-injection (e.g., same skill in system prompt twice)
-  2. Stale-version plugin cache (multiple versions of one plugin shipped to context)
-  3. CLAUDE.md re-injection growth (count occurrences across the session)
-  4. MCP server tools never called, total token cost of their definitions
-- A `tokenlens doctor` command that runs the workarounds documented in Issue #29971 (delete stale plugin versions, deduplicate skill symlinks).
-- Free, open-source under MIT.
+- [x] CLI `tokenlens status` shows the active session's token breakdown by source.
+- [x] `tokenlens watch` tails the active session and re-renders on append.
+- [x] `tokenlens doctor` detects + optionally fixes:
+  - [x] Stale plugin versions in `~/.claude/plugins/cache/`
+  - [x] Duplicate skill symlinks in `~/.claude/skills/`
+- [x] Skill attribution (`attributionSkill`) and share-by-weight attachment attribution
+  with cap-and-residual to surface cache invalidations honestly.
+- [x] MIT-licensed, OSS.
+
+### v1.1 follow-ups (post-launch)
+- CLAUDE.md re-injection counting (need to confirm where the per-tool-call
+  injection shows up in the jsonl — possibly under a different attachment type).
+- MCP-server-level rollup of `deferred_tools_added` events into per-server cost.
+- Per-tool "never called" detection (cross-reference `addedNames` against
+  `message.content[].name` over the session).
 
 ### v1 explicitly *not* in scope
 - ❌ macOS menu-bar app (Electron / Tauri / Swift). Ship CLI first; menu bar in v2.
@@ -220,8 +226,8 @@ If days 1–3 reveal that the session jsonl doesn't actually contain the system 
 
 ## 9. Decisions deferred (capture them when made)
 
-- [ ] Final name: tokenlens, ctxlens, or something else.
-- [ ] License: MIT (proposed) vs. Apache-2.0.
+- [x] Final name: **tokenlens** (kept; replace later if a better one surfaces).
+- [x] License: **MIT**.
 - [ ] Telemetry: do we ever phone home from the CLI? Default off, opt-in for "help us improve detection rules."
 - [ ] Should we ship a `tokenlens lint` command that runs in CI on a repo's `.claude/` config?
 - [ ] Pricing tier names for v2.

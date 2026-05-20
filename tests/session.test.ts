@@ -9,7 +9,7 @@ import {
   isAssistant,
   isAttachment,
 } from "../src/parsers/session.js";
-import { buildAttachmentEvents, totalsByCategory } from "../src/attribute.js";
+import { buildAttachmentEvents, buildAttribution, totalsByCategory } from "../src/attribute.js";
 import { encodeProjectDir } from "../src/claude-state.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -59,22 +59,48 @@ describe("attributeBySkill", () => {
 });
 
 describe("buildAttachmentEvents", () => {
-  it("share-attributes the next assistant turn's cache_creation across grouped attachments", async () => {
+  it("share-attributes by estimated weight, including text-less attachments", async () => {
     const rows = await parseSession(FIXTURE);
     const events = buildAttachmentEvents(rows);
     expect(events).toHaveLength(3);
 
-    // skill_listing (has content) and deferred_tools_delta (no content) both
-    // precede assistant turn 1 with 1000 cache_creation. Share-by-bytes
-    // gives skill_listing 100%, deferred_tools_added 0%.
+    // skill_listing + deferred_tools_delta both precede turn 1 (1000 cc).
+    // Both get nonzero attribution now: skill_listing by tokenized content,
+    // deferred_tools by tools_added * heuristic.
     expect(events[0].category).toBe("skill_listing");
-    expect(events[0].followingTurnCacheCreation).toBe(1000);
-    expect(events[1].category).toBe("deferred_tools_added");
-    expect(events[1].followingTurnCacheCreation).toBe(0);
+    expect(events[0].isEstimated).toBe(false);
+    expect(events[0].attributedCacheCreation).toBeGreaterThan(0);
 
-    // todo_reminder is solo before turn 2: gets all 200.
+    expect(events[1].category).toBe("deferred_tools_added");
+    expect(events[1].isEstimated).toBe(true);
+    expect(events[1].attributedCacheCreation).toBeGreaterThan(0);
+
+    // todo_reminder is solo before turn 2 — its weight is small (heuristic
+    // 50 vs observed 200 cc) so it's capped to weight * 1.5 = 75, and the
+    // residual goes to invalidation.
     expect(events[2].category).toBe("todo_reminder");
-    expect(events[2].followingTurnCacheCreation).toBe(200);
+    expect(events[2].attributedCacheCreation).toBeLessThan(200);
+  });
+
+  it("buckets residual cache_creation as invalidation_or_growth", async () => {
+    const rows = await parseSession(FIXTURE);
+    const result = buildAttribution(rows);
+
+    // The fixture's turn-1 cc (1000) far exceeds the cap, so we expect
+    // substantial unattributed bytes.
+    expect(result.unattributedCacheCreation).toBeGreaterThan(0);
+    expect(result.invalidationTurns).toBeGreaterThan(0);
+
+    // The total attributed across events + unattributed should never exceed
+    // the total observed cache_creation.
+    const attributedSum = result.events.reduce(
+      (n, e) => n + e.attributedCacheCreation,
+      0,
+    );
+    const observedTotal = 1000 + 200; // from fixture
+    expect(attributedSum + result.unattributedCacheCreation).toBeLessThanOrEqual(
+      observedTotal,
+    );
   });
 
   it("rolls up to categories", async () => {
