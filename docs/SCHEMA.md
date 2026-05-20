@@ -173,9 +173,10 @@ API errors. Includes `error.error` (with `type`, `message`, `request_id`), HTTP 
 ## Open questions for v1
 
 1. **Where does the literal system prompt live?** Not in any single line of the jsonl. Composed at runtime from settings.json + hooks + skills + plugins. For v1 we don't need the literal text — we attribute via the cache-creation jumps and the per-source attachment content.
-2. **Are there other `attachment.type` values in the wild we haven't seen?** Need to inspect a few more sessions.
-3. **Does `attributionSkill` ever attribute to plugins / non-skill sources?** This sample only contained `idea-scout`. Need more data.
-4. **What does `message.diagnostics.cache_miss_reason` look like when it's populated?** It's `null` in this clean session. We need a session with a real cache miss to see the shape.
+2. **CLAUDE.md re-injection is NOT visible in the session jsonl.** Verified 2026-05-20 by grepping a 700-line session for `<system-reminder>` and the user's CLAUDE.md content markers. The system-reminder block that contains CLAUDE.md / memory file contents shows up in the model's prompt (per Issue #29971 it's re-injected on every tool call), but the runtime injects it at the API request layer — it doesn't get logged to the per-turn jsonl. To attribute its cost we'd need to read the user's CLAUDE.md from disk, estimate the per-tool-call cost, and multiply by the session's tool_use count. Marked as a v1.1 candidate; not in v1 because the wedge-purity rule says we don't add features Anthropic could ship in `/context` themselves (they can trivially do this — they own the literal text).
+3. **Are there other `attachment.type` values in the wild we haven't seen?** Saw `other` (3 events) in the live session — need to enumerate which exact types fell into that bucket.
+4. **Does `attributionSkill` ever attribute to plugins / non-skill sources?** This sample only contained `idea-scout`. Need more data.
+5. **What does `message.diagnostics.cache_miss_reason` look like when it's populated?** It's `null` in this clean session. We need a session with a real cache miss to see the shape.
 
 ## Versioning
 
