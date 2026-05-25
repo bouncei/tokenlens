@@ -25,7 +25,7 @@ src/
 
 `docs/SCHEMA.md` is the source of truth for the session jsonl format. If you confirm a new field or attachment type, update SCHEMA.md in the same PR.
 
-`docs/GOAL.md` is the source of truth for what's in scope. The anti-goals section is what we say no to — if your PR adds a feature that lives in an anti-goal bucket, it probably won't land.
+See "Anti-goals reminder" at the bottom of this file for what's out of scope.
 
 ## Running locally
 
@@ -83,7 +83,7 @@ We will not merge:
 - Token pricing calculators for arbitrary models.
 - SaaS dashboard scaffolding before the CLI is solid.
 
-See `docs/GOAL.md` for the full rationale. If your PR is in an adjacent space and you're not sure, open an issue first.
+If your PR is in an adjacent space and you're not sure, open an issue first.
 
 ## License
 

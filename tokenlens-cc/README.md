@@ -51,4 +51,4 @@ Will be available via the community marketplace pending review:
 /plugin install @claude-community/tokenlens
 ```
 
-See [docs/V2-DESIGN.md](../docs/V2-DESIGN.md) for the full spec.
+Source: https://github.com/bouncei/tokenlens

@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Before filing, please skim [`docs/GOAL.md`](https://github.com/bouncei/tokenlens/blob/main/docs/GOAL.md) — it lists explicit anti-goals (things we won't do, like becoming a generic LLM observability platform). If your feature is in scope, this template helps us prioritize.
+        Before filing, please skim [`CONTRIBUTING.md`](https://github.com/bouncei/tokenlens/blob/main/CONTRIBUTING.md#anti-goals-reminder) — it lists what's out of scope (like becoming a generic LLM observability platform). If your feature is in scope, this template helps us prioritize.
 
   - type: textarea
     id: problem

@@ -131,7 +131,7 @@ claude --plugin-dir ./tokenlens-cc          # loads the plugin
 
 Now every tool call hits the budget evaluator. Watch the decisions in `~/.claude/tokenlens.log`. The PreToolUse hook contract is fail-allow — a misbehaving hook will never block your workflow.
 
-Marketplace submission to `claude-plugins-community` is pending. See [`docs/V2-DESIGN.md`](./docs/V2-DESIGN.md) for the full spec.
+Marketplace submission to `claude-plugins-community` is pending.
 
 ## How it works
 
@@ -145,7 +145,7 @@ Each line is a JSON object representing one event in the session. The relevant f
 
 We aggregate these, share-out each turn's cache_creation across the attachments that preceded it (weighted by tokenized content size, or a heuristic for text-less injections), and cap per-event attribution at 1.5× weight so cache invalidations don't get falsely pinned on whatever attachment happened to be most recent.
 
-Full schema notes in [`docs/SCHEMA.md`](./docs/SCHEMA.md). The project's north star is [`docs/GOAL.md`](./docs/GOAL.md).
+Full schema notes in [`docs/SCHEMA.md`](./docs/SCHEMA.md).
 
 ## Install (other paths)
 
@@ -178,7 +178,7 @@ Requires Node.js 20 or newer.
 - **v2 (in progress, testable now):** [`tokenlens-cc`](./tokenlens-cc/) plugin wiring tokenlens into Claude Code's `PreToolUse` hook — proactive budget warnings, hard caps, and session-context injection. Pending community marketplace review. Free tier stays free; paid tier ($9–19/mo) adds cross-machine sync, weekly digest, team views (not yet built).
 - **v3 (next 12 months):** Same value prop, cross-IDE. Cursor, Cline, Gemini CLI.
 
-See [`docs/GOAL.md`](./docs/GOAL.md) for the full project goal and anti-goals, and [`docs/V2-DESIGN.md`](./docs/V2-DESIGN.md) for the v2 spec.
+See [`DESIGN.md`](./DESIGN.md) for the architecture overview.
 
 ## Caveats
 
@@ -188,7 +188,7 @@ See [`docs/GOAL.md`](./docs/GOAL.md) for the full project goal and anti-goals, a
 
 ## Contributing
 
-Issues and PRs welcome. The project is small and the surface is well-bounded — start with [`docs/SCHEMA.md`](./docs/SCHEMA.md) to understand the session jsonl format, then [`docs/GOAL.md`](./docs/GOAL.md) to understand which features are in scope vs. explicit anti-goals.
+Issues and PRs welcome. The project is small and the surface is well-bounded — start with [`docs/SCHEMA.md`](./docs/SCHEMA.md) to understand the session jsonl format, then [`CONTRIBUTING.md`](./CONTRIBUTING.md) for how to add a new attachment category or analyzer.
 
 If your `~/.claude/` has a structure tokenlens doesn't recognize, please open an issue with a sample line (anonymized) — every new attachment type we map deepens the wedge.
 

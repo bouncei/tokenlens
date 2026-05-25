@@ -9,3 +9,10 @@ coverage/
 
 # Test fixtures may include sensitive paths — keep raw fixtures local
 tests/fixtures/raw/
+
+
+docs/SHOW-HN.md
+docs/LAUNCH.md
+docs/GOAL.md
+docs/V2-DESIGN.md
+docs/USER-REQUESTS.md
