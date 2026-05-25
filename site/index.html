@@ -682,6 +682,93 @@
     .reveal { opacity: 1; transform: none; }
     .row-line .bar i { transform: scaleX(1) !important; }
   }
+
+  /* ─── Mobile overrides ─── */
+  @media (max-width: 720px) {
+    body { font-size: 17px; }
+
+    /* Topbar: collapse the section-anchor nav, keep brand + GH/npm. */
+    .topbar .wrap { gap: 12px; }
+    .nav { gap: 14px; font-size: 11px; }
+    .nav .sep { display: none; }
+    .nav a[href^="#"] { display: none; }
+    .brand .ver { display: none; }
+
+    /* Hero spacing + headline air */
+    .hero { padding: 40px 0 56px; }
+    h1.headline { font-size: clamp(40px, 12vw, 64px); line-height: 1.02; }
+    .deck { font-size: 17px; }
+
+    /* Install rows: prompt + cmd + copy on the same line w/ tighter padding */
+    .install .row { padding: 12px 14px; gap: 10px; font-size: 12.5px; }
+    .install .row .cmd { min-width: 0; }
+    .install .row .copy { padding: 5px 8px; font-size: 10px; }
+
+    .meta { gap: 10px 18px; font-size: 11px; }
+
+    /* Hero terminal panel: tighter, allow horizontal scroll for wide rows */
+    .panel { margin-top: 32px; }
+    .panel-body { padding: 16px 14px 18px; font-size: 12px; line-height: 1.55; overflow-x: auto; }
+    .panel-head .title { font-size: 10px; }
+
+    /* row-line: shrink label column, drop the trailing "note" cell */
+    .row-line { grid-template-columns: 110px 1fr 60px; gap: 8px; }
+    .row-line .note { display: none; }
+    .row-line .bar { height: 12px; }
+
+    /* Editorial sections: less vertical air, larger floor for headlines */
+    .editorial { padding: 80px 0; }
+    .term-block { padding-block: 72px; }
+    .section-label { margin-bottom: 24px; font-size: 10px; letter-spacing: 0.18em; }
+    .section-label::before { width: 16px; }
+    .h2-editorial { font-size: clamp(34px, 9vw, 48px); margin-bottom: 20px; }
+    .lede { font-size: 19px; }
+    .lede + p { font-size: 17px; }
+    .editorial-grid { gap: 40px; }
+    .marginalia blockquote { font-size: 22px; }
+
+    /* Receipt: tighten padding + stack the meta row */
+    .receipt { padding: 28px 20px 30px; font-size: 13px; }
+    .receipt .ttl { font-size: 28px; }
+    .receipt .sub { font-size: 10px; letter-spacing: 0.16em; }
+    .receipt .meta { flex-direction: column; gap: 4px; align-items: flex-start; }
+    .receipt .item { grid-template-columns: 1fr auto; gap: 10px; }
+    .receipt .item .name { word-break: break-word; }
+    .receipt .item .name small { display: block; margin-left: 0; margin-top: 2px; }
+    .receipt .stamp { font-size: 16px; }
+
+    /* Command rows: tighter type, contained code blocks */
+    .cmd-list { gap: 56px; }
+    .cmd-row { gap: 24px; }
+    .cmd-num { font-size: 44px; }
+    .cmd-title { font-size: 28px; }
+    .cmd-text p { font-size: 16px; }
+    .cmd-output { padding: 16px 14px; font-size: 11.5px; line-height: 1.5; }
+
+    /* Reception pull-quote: tame quote-mark overflow */
+    .reception { padding: 96px 0; }
+    .reception .quote { font-size: clamp(48px, 14vw, 80px); max-width: 100%; }
+    .reception .response { font-size: clamp(24px, 7vw, 32px); }
+
+    /* Roadmap stack */
+    .roadmap-grid { gap: 20px; }
+    .roadmap-card { padding: 22px 20px 24px; }
+    .roadmap-card .ttl { font-size: 24px; }
+
+    /* Footer: tighter type */
+    footer.foot { padding: 56px 0 44px; }
+    .foot .lockup { font-size: 12px; }
+    .foot .links { gap: 14px; row-gap: 8px; }
+    .foot .links a { font-size: 11px; }
+    .foot .colophon { font-size: 13px; }
+  }
+
+  /* Very narrow phones: drop the row-line to a 2-col layout */
+  @media (max-width: 420px) {
+    .row-line { grid-template-columns: 90px 1fr; }
+    .row-line .val { grid-column: 2; text-align: right; margin-top: -4px; font-size: 11px; }
+    .install .row .copy { display: none; }
+  }
 </style>
 </head>
 <body>
