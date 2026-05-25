@@ -23,6 +23,7 @@ emit_allow() {
 CANDIDATES=(
   "${PLUGIN_ROOT}/../dist/hook-script.js"
   "${PLUGIN_ROOT}/dist/hook-script.js"
+  "$(npm root -g 2>/dev/null)/@bouncei/tokenlens/dist/hook-script.js"
   "$(npm root -g 2>/dev/null)/tokenlens/dist/hook-script.js"
 )
 

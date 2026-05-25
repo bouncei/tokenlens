@@ -1,6 +1,9 @@
 {
-  "name": "tokenlens",
+  "name": "@bouncei/tokenlens",
   "version": "0.0.1",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "See exactly what's eating your Claude Code context window — and stop it.",
   "type": "module",
   "bin": {

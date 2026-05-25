@@ -1,5 +1,6 @@
 # tokenlens
 
+[![npm](https://img.shields.io/npm/v/@bouncei/tokenlens.svg)](https://www.npmjs.com/package/@bouncei/tokenlens)
 [![ci](https://github.com/bouncei/tokenlens/actions/workflows/ci.yml/badge.svg)](https://github.com/bouncei/tokenlens/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%E2%89%A520-green)](https://nodejs.org)
@@ -7,7 +8,7 @@
 **See exactly what's eating your Claude Code context window — and stop it.**
 
 ```bash
-npx -y github:bouncei/tokenlens status
+npx -y @bouncei/tokenlens status
 ```
 
 That's the install. No clone, no build, no config.
@@ -153,9 +154,9 @@ The fastest install is `npx`, but if you want a stable binary on `$PATH`:
 
 ```bash
 # Globally
-pnpm add -g github:bouncei/tokenlens
+pnpm add -g @bouncei/tokenlens
 # or
-npm install -g github:bouncei/tokenlens
+npm install -g @bouncei/tokenlens
 
 # From source
 git clone https://github.com/bouncei/tokenlens.git
@@ -164,11 +165,7 @@ pnpm install      # also builds dist/ via the prepare script
 ./dist/index.js status
 ```
 
-Once published to npm:
-
-```bash
-npx tokenlens status
-```
+Published on npm: [`@bouncei/tokenlens`](https://www.npmjs.com/package/@bouncei/tokenlens).
 
 Requires Node.js 20 or newer.
 

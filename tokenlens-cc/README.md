@@ -15,9 +15,10 @@ Errors fail-allow — a broken hook never breaks your workflow.
 **Pre-release.** This is the v2 design surface. To test locally:
 
 ```bash
-# From the tokenlens repo root
-pnpm install           # builds dist/ via the prepare script
-claude --plugin-dir ./tokenlens-cc
+# Easiest — install the CLI globally, then load the plugin from a clone
+npm install -g @bouncei/tokenlens
+git clone https://github.com/bouncei/tokenlens.git
+claude --plugin-dir ./tokenlens/tokenlens-cc
 ```
 
 Then run any tool inside the session and watch `~/.claude/tokenlens.log` for the decisions emitted.
