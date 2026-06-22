@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tokenlens.bouncei.dev/sitemap.xml
