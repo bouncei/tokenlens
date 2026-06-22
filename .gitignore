@@ -3,6 +3,10 @@ dist/
 *.log
 .DS_Store
 .env
+
+# Playwright MCP scratch output + ad-hoc screenshot captures
+.playwright-mcp/
+/tokenlens-hero.png
 .env.local
 coverage/
 .vitest-cache/

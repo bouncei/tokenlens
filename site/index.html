@@ -3,17 +3,34 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>tokenlens — see what /context hides</title>
-<meta name="description" content="A receipt for your Claude Code session. Free, open-source CLI that decomposes the context bloat /context won't show you." />
+<title>Reduce Claude Code Token Usage — tokenlens</title>
+<meta name="description" content="Stop burning Claude Code tokens. tokenlens itemizes your context window, flags dead MCP tools loading unused schemas, and shows cache reads/writes. Free & open source." />
+<meta name="keywords" content="reduce Claude Code token usage, Claude Code context window, MCP token overhead, dead MCP tools, which MCP servers eat my context, token usage breakdown, Claude Max limit, cache read tokens, tokenlens" />
+<meta name="author" content="Joshua Inyang" />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
 <meta name="theme-color" content="#0F0E0D" />
+<link rel="canonical" href="https://tokenlens.bouncei.dev/" />
 
-<!-- Social -->
-<meta property="og:title" content="tokenlens — see what /context hides" />
-<meta property="og:description" content="A receipt for your Claude Code session. Free, open-source CLI." />
+<!-- Open Graph -->
+<meta property="og:site_name" content="tokenlens" />
+<meta property="og:locale" content="en_US" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://tokenlens.bouncei.dev/" />
-<link rel="canonical" href="https://tokenlens.bouncei.dev/" />
+<meta property="og:title" content="See where your Claude Code tokens actually go" />
+<meta property="og:description" content="A free CLI that itemizes your Claude Code context window, detects dead MCP tools wasting tokens, and shows what /context won't." />
+<meta property="og:image" content="https://tokenlens.bouncei.dev/og-image.png" />
+<meta property="og:image:secure_url" content="https://tokenlens.bouncei.dev/og-image.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="tokenlens — itemize your Claude Code context window and find dead MCP tools" />
+
+<!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="See where your Claude Code tokens actually go" />
+<meta name="twitter:description" content="A free CLI that itemizes your Claude Code context window, detects dead MCP tools wasting tokens, and shows what /context won't." />
+<meta name="twitter:image" content="https://tokenlens.bouncei.dev/og-image.png" />
+<meta name="twitter:image:alt" content="tokenlens — itemize your Claude Code context window and find dead MCP tools" />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -673,13 +690,52 @@
   .paper ::selection { background: var(--accent); color: var(--paper); }
 
   /* ─── Animations ─── */
-  .reveal { opacity: 0; transform: translateY(16px); transition: opacity .9s ease, transform .9s cubic-bezier(.2,.7,.1,1); }
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity .9s ease, transform .9s cubic-bezier(.2,.7,.1,1); transition-delay: var(--d, 0s); }
   .reveal.in { opacity: 1; transform: translateY(0); }
+
+  /* Hero intro — staggered fade-up on first paint */
+  .anim-up { opacity: 0; transform: translateY(22px); animation: animUp 1s cubic-bezier(.2,.7,.1,1) both; animation-delay: var(--d, 0s); }
+  @keyframes animUp { to { opacity: 1; transform: translateY(0); } }
+
+  /* Blinking terminal caret */
+  .caret {
+    display: inline-block;
+    width: .58ch; height: 1.05em;
+    background: var(--t-amber);
+    margin-left: .14em;
+    vertical-align: -0.16em;
+    box-shadow: 0 0 10px color-mix(in oklab, var(--t-amber) 70%, transparent);
+    animation: blink 1.15s steps(1) infinite;
+  }
+  @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+  /* Parallax — transform owned by JS; this just hints the compositor */
+  [data-px] { will-change: transform; }
+
+  /* Hover micro-interactions */
+  .roadmap-card, .cmd-output, .receipt {
+    transition: transform .45s cubic-bezier(.2,.7,.1,1), border-color .45s ease, box-shadow .45s ease;
+  }
+  .roadmap-card:hover, .cmd-output:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in oklab, var(--t-amber) 42%, transparent);
+    box-shadow: 0 20px 52px -30px rgba(0,0,0,.75);
+  }
+  .receipt:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 32px 72px -42px rgba(0,0,0,.8);
+  }
+  .install .row .copy { transition: all .15s ease, transform .12s ease; }
+  .install .row .copy:active { transform: scale(.93); }
+  .nav a, .meta a, .foot .links a, .roadmap-card li { transition: color .2s ease, opacity .2s ease, border-color .2s ease; }
 
   /* Reduce motion */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
     .reveal { opacity: 1; transform: none; }
+    .anim-up { opacity: 1 !important; transform: none !important; }
+    [data-px] { transform: none !important; }
+    .caret { display: none; }
     .row-line .bar i { transform: scaleX(1) !important; }
   }
 
@@ -770,6 +826,85 @@
     .install .row .copy { display: none; }
   }
 </style>
+
+<!-- Structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "tokenlens",
+      "alternateName": "@bouncei/tokenlens",
+      "operatingSystem": "macOS, Linux, Windows (Node.js >= 20)",
+      "applicationCategory": "DeveloperApplication",
+      "applicationSubCategory": "CLI",
+      "description": "A free, open-source CLI that itemizes your Claude Code context window, detects dead MCP tools loading unused schemas, and shows cache reads/writes — so you can reduce token usage.",
+      "url": "https://tokenlens.bouncei.dev/",
+      "downloadUrl": "https://www.npmjs.com/package/@bouncei/tokenlens",
+      "installUrl": "https://www.npmjs.com/package/@bouncei/tokenlens",
+      "softwareVersion": "0.1.0",
+      "license": "https://github.com/bouncei/tokenlens/blob/main/LICENSE",
+      "keywords": "Claude Code, token usage, context window, MCP, dead tools, cache tokens",
+      "image": "https://tokenlens.bouncei.dev/og-image.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Joshua Inyang",
+        "url": "https://github.com/bouncei"
+      },
+      "codeRepository": "https://github.com/bouncei/tokenlens"
+    },
+    {
+      "@type": "WebSite",
+      "name": "tokenlens",
+      "url": "https://tokenlens.bouncei.dev/",
+      "description": "See where your Claude Code tokens actually go. Reduce token usage and find dead MCP tools eating your context window."
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I see where my Claude Code tokens are going?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Run npx -y @bouncei/tokenlens status. tokenlens reads your local session log and itemizes the context window — input, cache writes, cache reads, output, and a per-source breakdown of what filled the cache."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What are dead MCP tools and why do they waste tokens?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "MCP servers load their tool schemas into context whether or not you ever call them. tokenlens flags servers and tools that were loaded but never invoked, so you can disable them and reclaim the tokens."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How can I reduce Claude Code token usage?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Identify and disable MCP servers you never call, watch cache_creation growth, and set a budget threshold. tokenlens doctor detects stale plugin versions and duplicate skill symlinks, and the tokenlens-cc plugin warns you before a tool call pushes you over your weekly cap."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is tokenlens free and does my data leave my machine?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "tokenlens is free and MIT-licensed. It reads local Claude Code session files under ~/.claude/ and transmits nothing — all analysis happens on your machine."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -794,17 +929,17 @@
   </div>
 
   <div class="wrap hero">
-    <div class="kicker"><span class="pulse"></span>v1 shipped · open source · MIT</div>
+    <div class="kicker anim-up" style="--d:.05s"><span class="pulse"></span>v1 shipped · open source · MIT</div>
 
-    <h1 class="headline">A receipt for your<br/><em>Claude Code</em> session.</h1>
+    <h1 class="headline anim-up" style="--d:.14s">A receipt for your<br/><em>Claude Code</em> session.</h1>
 
-    <p class="deck">
+    <p class="deck anim-up" style="--d:.24s">
       Anthropic's <code style="font-family:var(--f-mono);color:var(--t-amber);">/context</code> shows you "60% used."
       It won't tell you that 50,000 of those tokens went to MCP tools you never called.
       tokenlens itemizes the bill.
     </p>
 
-    <div class="install">
+    <div class="install anim-up" style="--d:.34s">
       <div class="row">
         <span class="prompt">$</span>
         <span class="cmd" id="cmd1">npx -y @bouncei/tokenlens status</span>
@@ -817,7 +952,7 @@
       </div>
     </div>
 
-    <div class="meta">
+    <div class="meta anim-up" style="--d:.44s">
       <span>Node ≥ 20</span>
       <span>Claude Code v2.1+</span>
       <a href="https://github.com/bouncei/tokenlens">github.com/bouncei/tokenlens</a>
@@ -825,13 +960,13 @@
     </div>
 
     <!-- The live terminal panel — the hero centerpiece -->
-    <div class="panel reveal" data-reveal-bars>
+    <div class="panel reveal" data-reveal-bars style="--d:.54s">
       <div class="panel-head">
         <div class="lights"><span class="l1"></span><span class="l2"></span><span class="l3"></span></div>
         <div class="title">~/your-project · tokenlens status</div>
       </div>
       <div class="panel-body">
-        <div><span class="prompt">$</span> tokenlens status</div>
+        <div><span class="prompt">$</span> tokenlens status<span class="caret"></span></div>
         <div class="dim">  session  ~/.claude/projects/&lt;cwd&gt;/&lt;uuid&gt;.jsonl</div>
         <div class="dim">  turns    263 assistant</div>
 
@@ -857,22 +992,22 @@
 <!-- ───────────────── THE LEDE (editorial) ───────────────── -->
 <section class="paper editorial">
   <div class="wrap">
-    <div class="section-label">§ 01 · The opening argument</div>
+    <div class="section-label" data-px data-px-speed="0.10">§ 01 · The opening argument</div>
     <div class="editorial-grid">
       <div>
-        <h2 class="h2-editorial">What <em>/context</em> hides.</h2>
-        <p class="lede">
+        <h2 class="h2-editorial" data-px data-px-speed="0.05">What <em>/context</em> hides.</h2>
+        <p class="lede reveal" style="--d:.05s">
           You're paying $200 a month for Claude Max. Your weekly limit feels tighter than the number on the bill should allow. The built-in <code style="font-family:var(--f-mono);font-size:.85em;color:var(--accent);background:color-mix(in oklab,var(--accent) 10%,transparent);padding:2px 6px;border-radius:2px;">/context</code> command shows a friendly percentage and nothing else.
         </p>
-        <p>
+        <p class="reveal" style="--d:.12s">
           Anthropic shipped Claude Code with a context inspector that <em>undercounts</em>. MCP server definitions, re-injected memory files, skill listings, dead tool schemas — all loaded into the cache, none of them surfaced as line items. The percentage is honest only about the part the vendor wants to be honest about.
         </p>
-        <p>
+        <p class="reveal" style="--d:.19s">
           A developer named Ryan filed Issue&nbsp;#29971 in March, documenting the undercount with reproductions. Anthropic closed it as <em>not&nbsp;planned</em>. tokenlens exists because their closure was your invitation.
         </p>
       </div>
 
-      <aside>
+      <aside class="reveal" style="--d:.1s">
         <div class="marginalia">
           <div class="source">Cited testimony</div>
           <blockquote>
@@ -897,11 +1032,11 @@
 <section class="term term-block" id="receipt">
   <div class="wrap">
     <div class="section-label" style="color:var(--t-amber);"><span style="background:var(--t-amber);width:24px;height:1px;display:inline-block;margin-right:12px;"></span>§ 02 · One real session</div>
-    <h2 class="h2-editorial" style="color:var(--t-fg);margin-bottom:48px;">
+    <h2 class="h2-editorial" data-px data-px-speed="0.05" style="color:var(--t-fg);margin-bottom:48px;">
       <em style="color:var(--t-amber);">263</em> assistant turns.<br/>2,400,000 invisible tokens.
     </h2>
 
-    <div class="receipt-wrap">
+    <div class="receipt-wrap reveal">
       <div class="receipt">
         <div class="ttl">tokenlens, inc.</div>
         <div class="sub">— context itemization —</div>
@@ -941,12 +1076,12 @@
 <!-- ───────────────── THE COMMANDS (editorial + terminal hybrid) ───────────────── -->
 <section class="paper editorial" id="commands">
   <div class="wrap">
-    <div class="section-label">§ 03 · Five commands</div>
-    <h2 class="h2-editorial" style="margin-bottom:64px;">Read the bill.<br/><em>Then trim it.</em></h2>
+    <div class="section-label" data-px data-px-speed="0.10">§ 03 · Five commands</div>
+    <h2 class="h2-editorial" data-px data-px-speed="0.05" style="margin-bottom:64px;">Read the bill.<br/><em>Then trim it.</em></h2>
 
     <div class="cmd-list">
 
-      <div class="cmd-row">
+      <div class="cmd-row reveal">
         <div class="cmd-text">
           <div class="cmd-num">i.</div>
           <h3 class="cmd-title">Read the meter <code>status</code></h3>
@@ -965,7 +1100,7 @@
   hook_additional_context       ░░░░       <span class="amber">791</span></pre>
       </div>
 
-      <div class="cmd-row flip">
+      <div class="cmd-row flip reveal">
         <pre class="cmd-output"><span class="prompt">$</span> tokenlens watch
 
 <span class="dim">Usage</span>
@@ -984,7 +1119,7 @@
         </div>
       </div>
 
-      <div class="cmd-row">
+      <div class="cmd-row reveal">
         <div class="cmd-text">
           <div class="cmd-num">iii.</div>
           <h3 class="cmd-title">Trim the fat <code>doctor</code></h3>
@@ -1005,7 +1140,7 @@
 <span class="dim">Nothing to do.</span></pre>
       </div>
 
-      <div class="cmd-row flip">
+      <div class="cmd-row flip reveal">
         <pre class="cmd-output"><span class="prompt">$</span> tokenlens budget
 
   decision          <span class="red">●  DENY</span>  <span class="dim">(at or above block threshold)</span>
@@ -1023,7 +1158,7 @@
         </div>
       </div>
 
-      <div class="cmd-row">
+      <div class="cmd-row reveal">
         <div class="cmd-text">
           <div class="cmd-num">v.</div>
           <h3 class="cmd-title">The v2 plugin <code>tokenlens-cc</code></h3>
@@ -1048,9 +1183,9 @@ your weekly cap (2.27M / 2.50M tokens).
 <section class="paper reception">
   <div class="wrap">
     <div class="section-label" style="justify-content:center;display:inline-flex;">§ 04 · The vendor's position</div>
-    <p class="quote">not&nbsp;planned.</p>
-    <p class="attr">— <a href="https://github.com/anthropics/claude-code/issues/29971">Issue&nbsp;#29971</a> · closed by Anthropic · March 2026</p>
-    <p class="response">We did it <em>anyway</em>.</p>
+    <p class="quote" data-px data-px-speed="0.07">not&nbsp;planned.</p>
+    <p class="attr reveal" style="--d:.05s">— <a href="https://github.com/anthropics/claude-code/issues/29971">Issue&nbsp;#29971</a> · closed by Anthropic · March 2026</p>
+    <p class="response reveal" style="--d:.14s">We did it <em>anyway</em>.</p>
   </div>
 </section>
 
@@ -1061,7 +1196,7 @@ your weekly cap (2.27M / 2.50M tokens).
     <h2 class="h2-editorial" style="color:var(--t-fg);">Shipped. Building. <em style="color:var(--t-amber);">Owed.</em></h2>
 
     <div class="roadmap-grid">
-      <div class="roadmap-card">
+      <div class="roadmap-card reveal" style="--d:0s">
         <div class="ver">v0.1 · shipped</div>
         <div class="ttl">The receipt.</div>
         <ul>
@@ -1073,7 +1208,7 @@ your weekly cap (2.27M / 2.50M tokens).
           <li class="done">npm @bouncei/tokenlens</li>
         </ul>
       </div>
-      <div class="roadmap-card">
+      <div class="roadmap-card reveal" style="--d:.12s">
         <div class="ver">v0.2 · in flight</div>
         <div class="ttl">The intervention.</div>
         <ul>
@@ -1085,7 +1220,7 @@ your weekly cap (2.27M / 2.50M tokens).
           <li class="next">cache invalidation alerts</li>
         </ul>
       </div>
-      <div class="roadmap-card">
+      <div class="roadmap-card reveal" style="--d:.24s">
         <div class="ver">v0.3 · next year</div>
         <div class="ttl">Other surfaces.</div>
         <ul>
@@ -1170,6 +1305,36 @@ your weekly cap (2.27M / 2.50M tokens).
       });
     }
   });
+
+  // ─── Parallax ─── transform-only, rAF-throttled, pointer + motion aware
+  (function () {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fine   = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const els = Array.from(document.querySelectorAll('[data-px]'));
+    if (reduce || !fine || !els.length) return;
+
+    let ticking = false;
+    function apply() {
+      const vh = window.innerHeight;
+      for (const el of els) {
+        const r = el.getBoundingClientRect();
+        const center = r.top + r.height / 2;
+        // -0.5 (top of viewport) .. +0.5 (bottom); clamp so off-screen drift stays small
+        let delta = (center - vh / 2) / vh;
+        delta = Math.max(-0.6, Math.min(0.6, delta));
+        const speed = parseFloat(el.dataset.pxSpeed || '0.08');
+        const y = -(delta * speed * vh);
+        el.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+      }
+      ticking = false;
+    }
+    function onScroll() {
+      if (!ticking) { ticking = true; requestAnimationFrame(apply); }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    apply();
+  })();
 </script>
 </body>
 </html>
